@@ -376,6 +376,42 @@ class AdminGroup(app_commands.Group):
             s["freed_coords"].append(x)
         await i.response.send_message(f"✅ X = **{x}** remis dans le pool.", ephemeral=True)
 
+    @app_commands.command(name="ajouter", description="Ajouter un joueur à la session en cours")
+    async def ajouter(self, i: discord.Interaction, joueur: discord.Member):
+        gid = i.guild_id
+        s = get_session(gid)
+        if not s["active"]:
+            await i.response.send_message("Aucune session active.", ephemeral=True)
+            return
+        if joueur.id in s["assignments"]:
+            await i.response.send_message(f"{joueur.mention} est déjà dans la session.", ephemeral=True)
+            return
+        if joueur.id in s["blacklisted"]:
+            await i.response.send_message(f"{joueur.mention} est bloqué.", ephemeral=True)
+            return
+
+        x = get_next_coord(gid)
+        if x is None:
+            await i.response.send_message("Plus aucune coordonnée disponible.", ephemeral=True)
+            return
+
+        display = joueur.display_name
+        s["assignments"][joueur.id] = x
+        z = s["start_z"]
+
+        ch = await get_output_channel(gid)
+        if ch is None:
+            try:
+                ch = await bot.fetch_channel(i.channel_id)
+            except Exception:
+                await i.response.send_message("❌ Canal de sortie introuvable.", ephemeral=True)
+                return
+
+        view = PlayerView(gid, joueur.id, display)
+        msg = await ch.send(content=f"{joueur.mention} — **X = {x}, Z = {z}**", view=view)
+        s["player_msgs"][joueur.id] = (ch.id, msg.id)
+        await i.response.send_message(f"✅ {joueur.mention} ajouté → X = **{x}**.", ephemeral=True)
+
     @app_commands.command(name="bloquer", description="Empêcher un joueur d'être sélectionné")
     async def bloquer(self, i: discord.Interaction, joueur: discord.Member):
         get_session(i.guild_id)["blacklisted"].add(joueur.id)
@@ -472,6 +508,12 @@ async def fait(i: discord.Interaction):
         names = [i.guild.get_member(pid) for pid in s["blacklisted"]]
         lines.append(f"**Joueurs bloqués :** {', '.join(m.display_name if m else str(m) for m in names)}")
 
+    forteresses = get_config(i.guild_id).get("fortresses", [])
+    if forteresses:
+        lines.append("\n**🏰 Forteresses :**")
+        for idx, f in enumerate(forteresses, 1):
+            lines.append(f"　**{idx}.** {f.get('nom')} — X = **{f['x']}**, Z = **{f['z']}**")
+
     await i.response.send_message("\n".join(lines))
 
 
@@ -510,6 +552,46 @@ async def fin(i: discord.Interaction):
     ch = await get_output_channel(gid) or await bot.fetch_channel(i.channel_id)
     await i.response.send_message("✅ Session terminée.", ephemeral=True)
     await ch.send("\n".join(lines))
+
+
+# ── /fort ─────────────────────────────────────────────────────────────────────
+@bot.tree.command(name="fort", description="Enregistrer une forteresse avec ses coordonnées")
+async def fort(i: discord.Interaction, x: int, z: int, nom: str = ""):
+    cfg = get_config(i.guild_id)
+    cfg.setdefault("fortresses", [])
+    entry = {"x": x, "z": z, "nom": nom or f"Forteresse {len(cfg['fortresses']) + 1}", "auteur": i.user.display_name}
+    cfg["fortresses"].append(entry)
+    save_configs()
+    await i.response.send_message(
+        f"🏰 **{entry['nom']}** enregistrée — X = **{x}**, Z = **{z}** (par {i.user.mention})"
+    )
+
+
+@bot.tree.command(name="forts", description="Voir toutes les forteresses enregistrées")
+async def forts(i: discord.Interaction):
+    cfg = get_config(i.guild_id)
+    liste = cfg.get("fortresses", [])
+    if not liste:
+        await i.response.send_message("Aucune forteresse enregistrée.", ephemeral=True)
+        return
+    lines = ["**🏰 Forteresses enregistrées :**"]
+    for idx, f in enumerate(liste, 1):
+        nom = f.get("nom", f"Forteresse {idx}")
+        lines.append(f"**{idx}.** {nom} — X = **{f['x']}**, Z = **{f['z']}** *(par {f.get('auteur', '?')})*")
+    await i.response.send_message("\n".join(lines))
+
+
+@bot.tree.command(name="fort_supprimer", description="Supprimer une forteresse par son numéro (voir /forts)")
+@app_commands.default_permissions(manage_guild=True)
+async def fort_supprimer(i: discord.Interaction, numero: int):
+    cfg = get_config(i.guild_id)
+    liste = cfg.get("fortresses", [])
+    if numero < 1 or numero > len(liste):
+        await i.response.send_message(f"Numéro invalide. Il y a {len(liste)} forteresse(s).", ephemeral=True)
+        return
+    removed = liste.pop(numero - 1)
+    save_configs()
+    await i.response.send_message(f"🗑️ **{removed['nom']}** supprimée.", ephemeral=True)
 
 
 # ── /aide ─────────────────────────────────────────────────────────────────────
