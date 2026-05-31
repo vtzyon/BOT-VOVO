@@ -100,9 +100,13 @@ def free_coord(guild_id: int, player_id: int, display_name: str, *, truly_done: 
     x = s["assignments"].pop(player_id, None)
     if x is None:
         return None
-    s["completed"].append((display_name, x))
-    if not truly_done and x not in s["freed_coords"] and x not in s["blocked_coords"]:
-        s["freed_coords"].append(x)
+    if truly_done:
+        # Travail terminé → historique uniquement
+        s["completed"].append((display_name, x))
+    else:
+        # Kicked / quitte / retiré → pool uniquement, pas dans l'historique
+        if x not in s["freed_coords"] and x not in s["blocked_coords"]:
+            s["freed_coords"].append(x)
     return x
 
 
