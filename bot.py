@@ -419,25 +419,33 @@ class AdminGroup(app_commands.Group):
         display = joueur.display_name
         count = 0
 
-        # Retirer la coordonnée active
-        if joueur.id in s["assignments"]:
-            freed_x = free_coord(gid, joueur.id, display, truly_done=False)
+        # Retirer la coordonnée active sans passer par completed
+        x_actif = s["assignments"].pop(joueur.id, None)
+        if x_actif is not None:
+            if x_actif not in s["freed_coords"] and x_actif not in s["blocked_coords"]:
+                s["freed_coords"].append(x_actif)
             await edit_player_msg(gid, joueur.id,
                 f"{joueur.mention} — 🗑️ **Toutes vos coordonnées ont été supprimées par un admin.**",
                 view=None)
             s["player_msgs"].pop(joueur.id, None)
             count += 1
 
-        # Retirer toutes les entrées dans l'historique completed
-        before = len(s["completed"])
-        s["completed"] = [(name, x) for name, x in s["completed"] if name != display]
-        count += before - len(s["completed"])
+        # Retirer l'historique et remettre ces X dans le pool
+        restant = []
+        for name, x in s["completed"]:
+            if name == display:
+                if x not in s["freed_coords"] and x not in s["blocked_coords"] and x not in s["assignments"].values():
+                    s["freed_coords"].append(x)
+                count += 1
+            else:
+                restant.append((name, x))
+        s["completed"] = restant
 
         if count == 0:
             await i.response.send_message(f"{joueur.mention} n'a aucune coordonnée à supprimer.", ephemeral=True)
         else:
             await i.response.send_message(
-                f"🗑️ **{count}** coordonnée(s) de {joueur.mention} supprimées (actives + historique).",
+                f"🗑️ **{count}** coordonnée(s) de {joueur.mention} supprimées et remises dans le pool.",
                 ephemeral=True
             )
 
