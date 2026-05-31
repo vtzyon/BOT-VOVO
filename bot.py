@@ -412,6 +412,35 @@ class AdminGroup(app_commands.Group):
         s["player_msgs"][joueur.id] = (ch.id, msg.id)
         await i.response.send_message(f"✅ {joueur.mention} ajouté → X = **{x}**.", ephemeral=True)
 
+    @app_commands.command(name="delall", description="Supprimer toutes les coordonnées d'un joueur (actives et historique)")
+    async def delall(self, i: discord.Interaction, joueur: discord.Member):
+        gid = i.guild_id
+        s = get_session(gid)
+        display = joueur.display_name
+        count = 0
+
+        # Retirer la coordonnée active
+        if joueur.id in s["assignments"]:
+            freed_x = free_coord(gid, joueur.id, display, truly_done=False)
+            await edit_player_msg(gid, joueur.id,
+                f"{joueur.mention} — 🗑️ **Toutes vos coordonnées ont été supprimées par un admin.**",
+                view=None)
+            s["player_msgs"].pop(joueur.id, None)
+            count += 1
+
+        # Retirer toutes les entrées dans l'historique completed
+        before = len(s["completed"])
+        s["completed"] = [(name, x) for name, x in s["completed"] if name != display]
+        count += before - len(s["completed"])
+
+        if count == 0:
+            await i.response.send_message(f"{joueur.mention} n'a aucune coordonnée à supprimer.", ephemeral=True)
+        else:
+            await i.response.send_message(
+                f"🗑️ **{count}** coordonnée(s) de {joueur.mention} supprimées (actives + historique).",
+                ephemeral=True
+            )
+
     @app_commands.command(name="bloquer", description="Empêcher un joueur d'être sélectionné")
     async def bloquer(self, i: discord.Interaction, joueur: discord.Member):
         get_session(i.guild_id)["blacklisted"].add(joueur.id)
@@ -620,6 +649,7 @@ async def aide(i: discord.Interaction):
         "`/admin ajouter @joueur` — Ajoute un joueur à la session en cours\n"
         "`/admin kick @joueur` — Retire un joueur, sa coordonnée revient dans le pool\n"
         "`/admin desassigner @joueur` — Lui retire sa coordonnée et lui en donne une nouvelle\n"
+        "`/admin delall @joueur` — Supprime **toutes** les coordonnées d'un joueur (actives + historique)\n"
         "`/admin retirer_coord X` — Bloque une coordonnée X (réassigne automatiquement)\n"
         "`/admin ajouter_coord X` — Remet une coordonnée X bloquée dans le pool\n"
         "`/admin bloquer @joueur` — Interdit à ce joueur d'être sélectionné\n"
