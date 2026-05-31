@@ -615,10 +615,16 @@ async def aide(i: discord.Interaction):
         "　🔴 **✗ Quitter** : tu quittes, ta coordonnée est libérée pour un autre"
     ), inline=False)
     embed.add_field(name="📊 Informations", value=(
-        "`/fait` — Affiche toutes les coordonnées en cours et terminées\n"
+        "`/fait` — Affiche les coordonnées en cours, terminées et les forteresses\n"
         "`/fin` *(admin)* — Termine la session et affiche le bilan final"
     ), inline=False)
+    embed.add_field(name="🏰 Forteresses", value=(
+        "`/fort x: z:` — Enregistre une forteresse (paramètre `nom:` optionnel)\n"
+        "`/forts` — Liste toutes les forteresses enregistrées\n"
+        "`/fort_supprimer numéro:` *(admin)* — Supprime une forteresse par son numéro"
+    ), inline=False)
     embed.add_field(name="🛡️ Commandes admin (`/admin`)", value=(
+        "`/admin ajouter @joueur` — Ajoute un joueur à la session en cours\n"
         "`/admin kick @joueur` — Retire un joueur, sa coordonnée revient dans le pool\n"
         "`/admin desassigner @joueur` — Lui retire sa coordonnée et lui en donne une nouvelle\n"
         "`/admin retirer_coord X` — Bloque une coordonnée X (réassigne automatiquement)\n"
