@@ -654,5 +654,5 @@ async def aide(i: discord.Interaction):
 # ── Lancement ─────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     if not TOKEN:
-        raise ValueError("DISCORD_TOKEN manquant dans .env — copie .env.example en .env et remplis-le.")
+        raise ValueError("DISCORD_TOKEN manquant. Sur Railway : ajoute DISCORD_TOKEN dans Variables. En local : crée un fichier .env avec DISCORD_TOKEN=ton_token")
     bot.run(TOKEN)
