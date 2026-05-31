@@ -431,20 +431,11 @@ bot.tree.add_command(AdminGroup())
 async def on_ready():
     print(f"Bot connecté : {bot.user}  (ID : {bot.user.id})")
     print(f"Présent sur {len(bot.guilds)} serveur(s).")
-    # Supprimer les commandes globales (cause des doublons)
-    bot.tree.clear_commands(guild=None)
-    await bot.tree.sync()
-
-
-@bot.event
-async def on_guild_available(guild: discord.Guild):
     try:
-        synced = await bot.tree.sync(guild=guild)
-        cfg = get_config(guild.id)
-        ch_id = cfg.get("output_channel_id")
-        print(f"'{guild.name}' : {len(synced)} commandes | canal: {ch_id or 'non configuré (/setup)'}")
+        synced = await bot.tree.sync()
+        print(f"{len(synced)} commande(s) synchronisée(s).")
     except Exception as e:
-        print(f"Erreur sync '{guild.name}' : {e}")
+        print(f"Erreur sync : {e}")
 
 
 # ── /setup ────────────────────────────────────────────────────────────────────
