@@ -431,12 +431,14 @@ bot.tree.add_command(AdminGroup())
 async def on_ready():
     print(f"Bot connecté : {bot.user}  (ID : {bot.user.id})")
     print(f"Présent sur {len(bot.guilds)} serveur(s).")
+    # Supprimer les commandes globales (cause des doublons)
+    bot.tree.clear_commands(guild=None)
+    await bot.tree.sync()
 
 
 @bot.event
 async def on_guild_available(guild: discord.Guild):
     try:
-        bot.tree.copy_global_to(guild=guild)
         synced = await bot.tree.sync(guild=guild)
         cfg = get_config(guild.id)
         ch_id = cfg.get("output_channel_id")
