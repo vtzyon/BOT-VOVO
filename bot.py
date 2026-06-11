@@ -548,7 +548,13 @@ async def fait(i: discord.Interaction):
         for idx, f in enumerate(forteresses, 1):
             lines.append(f"　**{idx}.** {f.get('nom')} — X = **{f['x']}**, Z = **{f['z']}**")
 
-    await i.response.send_message("\n".join(lines))
+    text = "\n".join(lines)
+    if len(text) <= 2000:
+        await i.response.send_message(text)
+    else:
+        await i.response.send_message(text[:2000])
+        for chunk in [text[j:j+2000] for j in range(2000, len(text), 2000)]:
+            await i.followup.send(chunk)
 
 
 # ── /fin ──────────────────────────────────────────────────────────────────────
@@ -583,9 +589,26 @@ async def fin(i: discord.Interaction):
     else:
         lines.append("_Aucune coordonnée n'a été complétée._")
 
+    forteresses = get_config(gid).get("fortresses", [])
+    if forteresses:
+        lines.append("\n**🏰 Forteresses :**")
+        for idx, f in enumerate(forteresses, 1):
+            lines.append(f"　**{idx}.** {f.get('nom')} — X = **{f['x']}**, Z = **{f['z']}**")
+
+    # Reset complet
+    get_config(gid)["fortresses"] = []
+    save_configs()
+    reset_session(gid)
+
     ch = await get_output_channel(gid) or await bot.fetch_channel(i.channel_id)
     await i.response.send_message("✅ Session terminée.", ephemeral=True)
-    await ch.send("\n".join(lines))
+    text = "\n".join(lines)
+    if len(text) <= 2000:
+        await ch.send(text)
+    else:
+        await ch.send(text[:2000])
+        for chunk in [text[j:j+2000] for j in range(2000, len(text), 2000)]:
+            await ch.send(chunk)
 
 
 # ── /fort ─────────────────────────────────────────────────────────────────────
